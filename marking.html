@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mark Attendance</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header">
+    <div><h1>Mark Attendance</h1><div class="small">Click a subject cell to open the marking modal (P / A / OD / H).</div></div>
+    <div class="nav">
+      <a class="btn ghost" href="index.html">Dashboard</a>
+      <a class="btn" href="timetable.html">Edit Timetable</a>
+      <a class="btn" href="visualization.html">Visualization</a>
+    </div>
+  </div>
+
+  <div style="margin-top:18px;display:flex;gap:18px">
+    <div class="card" style="flex:1">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>Week View</strong>
+        <div class="row">
+          <button id="prevWeek" class="btn ghost">◀</button>
+          <div id="weekLabel" class="small" style="min-width:150px;text-align:center"></div>
+          <button id="nextWeek" class="btn ghost">▶</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;overflow:auto">
+        <table class="table" id="ttable">
+          <thead><tr><th>Slot</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="width:360px">
+      <h4>Controls</h4>
+      <div style="margin-top:8px" class="small">Week numbering starts from Jul 14 (this year). Week 1 = Jul14–Jul20.</div>
+      <div style="margin-top:12px" class="controls">
+        <button id="clearWeek" class="btn ghost">Clear Week</button>
+        <button id="todayBtn" class="btn">Go To Current Week</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <h4>Legend</h4>
+        <div class="legend">
+          <span class="P">P Present</span><span class="A">A Absent</span><span class="OD">OD</span><span class="H">Holiday</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modalRoot"></div>
+
+  <script src="storage.js"></script>
+  <script src="marking.js"></script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Attendance Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Attendance Dashboard</h1>
+      <div class="small">Navigation hub — go to edit timetable, marking, or visualization.</div>
+    </div>
+    <div class="nav">
+      <a class="btn" href="timetable.html">Edit Timetable</a>
+      <a class="btn" href="marking.html">Mark Attendance</a>
+      <a class="btn" href="visualization.html">Visualization</a>
+      <button id="exportBtn" class="btn ghost">Export JSON</button>
+    </div>
+  </div>
+
+  <div class="container" style="margin-top:18px">
+    <div class="card">
+      <h3>Quick Links</h3>
+      <div class="nav-cards" style="margin-top:12px">
+        <a class="card-link" href="timetable.html"><div><strong>Timetable Editor</strong><div class="small">Add/modify slots & assign subject per day</div></div><div>✏️</div></a>
+        <a class="card-link" href="marking.html"><div><strong>Mark Attendance</strong><div class="small">Week-wise marking modal - P/A/OD/H</div></div><div>📝</div></a>
+        <a class="card-link" href="visualization.html"><div><strong>Visualization</strong><div class="small">Charts: include & exclude OD</div></div><div>📊</div></a>
+      </div>
+
+      <div style="margin-top:14px">
+        <h4>Guidelines</h4>
+        <div class="small" style="margin-top:6px">
+          • The app stores data locally in your browser (localStorage).<br>
+          • Week 1 starts from <strong>Jul 14 — Jul 20</strong> (this year). Weeks increment after that.<br>
+          • Use <em>Edit Timetable</em> to set slots and subjects. Then use <em>Mark Attendance</em> for weekly marking.<br>
+          • Export JSON for backup. Import has been removed to avoid accidental overwrites.
+        </div>
+      </div>
+
+      <div style="margin-top:16px" class="small">© <strong class = "x">PRANEETH CHALAPATI</strong></div>
+    </div>
+
+    <div class="card">
+      <h3>Quick status</h3>
+      <div id="quickStats" class="grid-4" style="margin-top:12px">
+        <div class="stat-card"><div class="small">Timetable slots</div><div id="slotCount" style="font-weight:800;font-size:20px">—</div></div>
+        <div class="stat-card"><div class="small">Subjects</div><div id="subjectCount" style="font-weight:800;font-size:20px">—</div></div>
+        <div class="stat-card"><div class="small">Total recorded weeks</div><div id="weekCount" style="font-weight:800;font-size:20px">—</div></div>
+        <div class="stat-card"><div class="small">Today week #</div><div id="todayWeek" style="font-weight:800;font-size:20px">—</div></div>
+      </div>
+
+      <div style="margin-top:14px">
+        <div class="small">Backup</div>
+        <div class="small" style="margin-top:6px">Use Export to produce a JSON snapshot you can save. (Import intentionally removed.)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="small">Built local-first • Keep a backup copy of exported JSON regularly</div>
+  </div>
+
+  <script src="storage.js"></script>
+  <script>
+    // quick stats
+    const tt = loadTimetable() || {subjects:[],slots:[]};
+    const att = loadAttendance();
+    document.getElementById('slotCount').textContent = (tt.slots||[]).length;
+    document.getElementById('subjectCount').textContent = (tt.subjects||[]).length;
+    document.getElementById('weekCount').textContent = Object.keys(att||{}).length;
+    document.getElementById('todayWeek').textContent = 'Week ' + weekNumberForDate(new Date());
+
+    document.getElementById('exportBtn').addEventListener('click', ()=>{
+      const payload = {version:'v2', timetable: tt, attendance: att};
+      const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'attendance_backup_v2.json'; a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+  <!-- Pacifico font for signature -->
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+</body>
+</html>
