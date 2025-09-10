@@ -24,7 +24,7 @@
     // weeks window from START_DATE (26 weeks)
     const start = startOfWeek(START_DATE);
     const opts = [];
-    for(let i=0;i<52;i++){
+    for(let i=1;i<53;i++){
       const s = new Date(start); s.setDate(start.getDate() + 7*i);
       const iso = isoDate(s);
       opts.push(iso);
