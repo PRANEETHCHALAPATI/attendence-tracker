@@ -11,16 +11,31 @@ const START_DATE = (() => {
 function loadTimetable(){
   const s = localStorage.getItem(TT_KEY);
   if(!s) return null;
-  try{ return JSON.parse(s); }catch(e){ return null; }
+  try
+  { 
+    return JSON.parse(s); 
+  }
+  catch(e)
+  { 
+    return null; 
+  }
 }
-function saveTimetable(obj){ localStorage.setItem(TT_KEY, JSON.stringify(obj)); }
+function saveTimetable(obj){
+   localStorage.setItem(TT_KEY, JSON.stringify(obj)); 
+  }
 
-function loadAttendance(){ try{ return JSON.parse(localStorage.getItem(ATT_KEY) || '{}'); }catch(e){ return {}; } }
+function loadAttendance(){ 
+  try{ 
+    return JSON.parse(localStorage.getItem(ATT_KEY) || '{}'); 
+  }
+    catch(e)
+    { return {};
+   } }
 function saveAttendance(obj){ localStorage.setItem(ATT_KEY, JSON.stringify(obj)); }
 
 // week helpers
 function startOfWeek(date){ const d = new Date(date); const day = d.getDay(); const diff = (day + 6) % 7; d.setDate(d.getDate() - diff); d.setHours(0,0,0,0); return d; }
-function isoDate(d){ const x = new Date(d); x.setHours(0,0,0,0); return x.toISOString().slice(0,10); }
+function isoDate(d){ const x = new Date(d); x.setHours(0,0,0,0); return x.toLocaleDateString().slice(0,10); }
 function weekKeyFromDate(date){
   const s = startOfWeek(date);
   return isoDate(s); // use week-start ISO as key
