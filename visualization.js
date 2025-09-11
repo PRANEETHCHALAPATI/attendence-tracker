@@ -24,14 +24,15 @@
     // weeks window from START_DATE (26 weeks)
     const start = startOfWeek(START_DATE);
     const opts = [];
-    for(let i=1;i<53;i++){
-      const s = new Date(start); s.setDate(start.getDate() + 7*i);
+    for(let i=0;i<52;i++){
+      const s = new Date(start); 
+      s.setDate(start.getDate() + 7*i);
       const iso = isoDate(s);
       opts.push(iso);
     }
     // add any recorded weeks as well
     const recorded = Object.keys(attendance || {});
-    const uniq = Array.from(new Set([...opts, ...recorded])).sort();
+    const uniq = Array.from(new Set([...opts, ...recorded]));
     uniq.forEach(iso=>{
       const opt = document.createElement('option');
       opt.value = iso;
