@@ -1,5 +1,5 @@
-// marking.js (updated to display OD reason inline)
-// Relies on storage.js helpers: loadTimetable(), loadAttendance(), saveAttendance(), weekKeyFromDate(), weekNumberForDate(), weekLabelFromStartIso(), startOfWeek()
+// marking.js (updated to lock navigation between Week 1 and Current Week)
+// Relies on storage.js helpers
 
 (function(){
   let timetable = loadTimetable() || {subjects:[], slots:[]};
@@ -11,26 +11,30 @@
   const clearWeekBtn = document.getElementById('clearWeek'), todayBtn = document.getElementById('todayBtn');
   const modalRoot = document.getElementById('modalRoot');
 
+  // First allowed week (Week 1 → 14/7/2025)
+  const FIRST_WEEK_START = new Date("2025-07-14");
   let currentWeekStart = startOfWeek(new Date());
 
   function render(){
-    // table rows by slot
     tbody.innerHTML = '';
     for(const slot of timetable.slots){
       const tr = document.createElement('tr');
-      const tdLabel = document.createElement('td'); tdLabel.textContent = slot.label; tdLabel.className='slot-label';
+      const tdLabel = document.createElement('td');
+      tdLabel.textContent = slot.label;
+      tdLabel.className='slot-label';
       tr.appendChild(tdLabel);
-      ['mon','tue','wed','thu','fri','sat'].forEach((day, idx)=>{
+
+      ['mon','tue','wed','thu','fri','sat'].forEach(day=>{
         const td = document.createElement('td');
         td.dataset.slot = slot.id; td.dataset.day = day;
         const wkKey = weekKeyFromDate(currentWeekStart);
         const key = `${slot.id}_${day}`;
         const subCode = slot.map[day] || '';
-        if(!subCode){ td.innerHTML = '<div class="small">—</div>'; }
-        else {
+        if(!subCode){ 
+          td.innerHTML = '<div class="small">—</div>'; 
+        } else {
           const subj = timetable.subjects.find(s => s.code === subCode) || {short: subCode};
           const rec = attendance[wkKey] && attendance[wkKey][key];
-          // show status and include OD reason inline
           let statusHtml = '<span class="small">Not marked</span>';
           if(rec){
             const status = rec.status || '';
@@ -38,11 +42,13 @@
               const reason = rec.odReason ? ` (${escapeHtml(rec.odReason)})` : '';
               statusHtml = `<span class="status OD">OD${reason}</span>`;
             } else {
-              // P, A, H
               statusHtml = `<span class="status ${status}">${status}</span>`;
             }
           }
-          td.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px"><div style="font-weight:800">${escapeHtml(subj.short)}</div><div>${statusHtml}</div></div>`;
+          td.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px">
+                            <div style="font-weight:800">${escapeHtml(subj.short)}</div>
+                            <div>${statusHtml}</div>
+                          </div>`;
           td.style.cursor = 'pointer';
           td.addEventListener('click', ()=> openModal(wkKey, slot.id, day, subCode));
         }
@@ -72,13 +78,18 @@
     bd.appendChild(box); modalRoot.appendChild(bd);
 
     box.querySelectorAll('button[data-act]').forEach(btn=>{
-      btn.addEventListener('click', async (e)=>{
+      btn.addEventListener('click', ()=>{
         const a = btn.dataset.act;
         if(a === 'close'){ modalRoot.innerHTML=''; return; }
         const key = `${slotId}_${day}`;
         if(a === 'clear'){
-          if(attendance[weekIso]){ delete attendance[weekIso][key]; if(Object.keys(attendance[weekIso]).length===0) delete attendance[weekIso]; saveAttendance(attendance); render(); modalRoot.innerHTML=''; }
-          else modalRoot.innerHTML='';
+          if(attendance[weekIso]){
+            delete attendance[weekIso][key];
+            if(Object.keys(attendance[weekIso]).length===0) delete attendance[weekIso];
+            saveAttendance(attendance);
+            render();
+          }
+          modalRoot.innerHTML='';
           return;
         }
         if(a === 'OD'){
@@ -90,22 +101,53 @@
           if(!attendance[weekIso]) attendance[weekIso] = {};
           attendance[weekIso][key] = {subject:subjectCode, status:a, odReason:''};
         }
-        saveAttendance(attendance); render(); modalRoot.innerHTML='';
+        saveAttendance(attendance);
+        render();
+        modalRoot.innerHTML='';
       });
     });
 
     bd.addEventListener('click', (ev)=>{ if(ev.target === bd) modalRoot.innerHTML=''; });
   }
 
-  // navigation
-  prevWeek.addEventListener('click', ()=>{ currentWeekStart.setDate(currentWeekStart.getDate() - 7); render(); });
-  nextWeek.addEventListener('click', ()=>{ currentWeekStart.setDate(currentWeekStart.getDate() + 7); render(); });
-  clearWeekBtn.addEventListener('click', ()=>{ const wk = weekKeyFromDate(currentWeekStart); if(confirm('Clear attendance for this week?')){ delete attendance[wk]; saveAttendance(attendance); render(); }});
-  todayBtn.addEventListener('click', ()=>{ currentWeekStart = startOfWeek(new Date()); render(); });
+  // navigation with bounds
+  prevWeek.addEventListener('click', ()=>{
+    const newDate = new Date(currentWeekStart);
+    newDate.setDate(newDate.getDate() - 7);
+    if(newDate >= FIRST_WEEK_START){
+      currentWeekStart = newDate;
+      render();
+    }
+  });
 
-  // helper: simple text esc to avoid accidental HTML injection in labels
-  function escapeHtml(s){ if(!s && s!==0) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+  nextWeek.addEventListener('click', ()=>{
+    const newDate = new Date(currentWeekStart);
+    newDate.setDate(newDate.getDate() + 7);
+    const thisWeekStart = startOfWeek(new Date());
+    if(newDate <= thisWeekStart){
+      currentWeekStart = newDate;
+      render();
+    }
+  });
 
-  // initial
+  clearWeekBtn.addEventListener('click', ()=>{
+    const wk = weekKeyFromDate(currentWeekStart);
+    if(confirm('Clear attendance for this week?')){
+      delete attendance[wk];
+      saveAttendance(attendance);
+      render();
+    }
+  });
+
+  todayBtn.addEventListener('click', ()=>{
+    currentWeekStart = startOfWeek(new Date());
+    render();
+  });
+
+  function escapeHtml(s){ 
+    if(!s && s!==0) return ''; 
+    return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); 
+  }
+
   render();
 })();
