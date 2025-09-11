@@ -1,4 +1,4 @@
-// marking.js (updated to lock navigation between Week 1 and Current Week)
+// marking.js (final) — Week 1 locked to 14/07/2025
 // Relies on storage.js helpers
 
 (function(){
@@ -7,13 +7,27 @@
 
   const tbody = document.getElementById('tbody');
   const weekLabel = document.getElementById('weekLabel');
-  const prevWeek = document.getElementById('prevWeek'), nextWeek = document.getElementById('nextWeek');
-  const clearWeekBtn = document.getElementById('clearWeek'), todayBtn = document.getElementById('todayBtn');
+  const prevWeek = document.getElementById('prevWeek'),
+        nextWeek = document.getElementById('nextWeek');
+  const clearWeekBtn = document.getElementById('clearWeek'),
+        todayBtn = document.getElementById('todayBtn');
   const modalRoot = document.getElementById('modalRoot');
 
-  // First allowed week (Week 1 → 14/7/2025)
-  const FIRST_WEEK_START = new Date("2025-07-14");
-  let currentWeekStart = startOfWeek(new Date());
+  // Week 1 starts here
+  const FIRST_WEEK_START = new Date("2025-07-14"); // Mon, Jul 14 2025
+  let currentWeekStart = FIRST_WEEK_START;
+
+  // --- Helpers ---
+  function weekNumberForDate(date){
+    const diff = date - FIRST_WEEK_START;
+    return Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
+  }
+
+  function weekLabelRange(startDate){
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    return `${startDate.toLocaleDateString()} – ${endDate.toLocaleDateString()}`;
+  }
 
   function render(){
     tbody.innerHTML = '';
@@ -56,7 +70,8 @@
       });
       tbody.appendChild(tr);
     }
-    weekLabel.textContent = `Week ${weekNumberForDate(currentWeekStart)} • ${weekLabelFromStartIso(weekKeyFromDate(currentWeekStart))}`;
+
+    weekLabel.textContent = `Week ${weekNumberForDate(currentWeekStart)} • ${weekLabelRange(currentWeekStart)}`;
   }
 
   function openModal(weekIso, slotId, day, subjectCode){
@@ -64,7 +79,8 @@
     const bd = document.createElement('div'); bd.className='modal-backdrop';
     const box = document.createElement('div'); box.className='modal';
     const subj = timetable.subjects.find(s=>s.code===subjectCode) || {short:subjectCode};
-    box.innerHTML = `<h3>${escapeHtml(subj.short)} • ${day.toUpperCase()}</h3><div class="small">Slot: ${escapeHtml(slotId)}</div>
+    box.innerHTML = `<h3>${escapeHtml(subj.short)} • ${day.toUpperCase()}</h3>
+      <div class="small">Slot: ${escapeHtml(slotId)}</div>
       <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" data-act="P">Present</button>
         <button class="btn ghost" data-act="A">Absent</button>
@@ -140,7 +156,9 @@
   });
 
   todayBtn.addEventListener('click', ()=>{
-    currentWeekStart = startOfWeek(new Date());
+    let todayStart = startOfWeek(new Date());
+    if(todayStart < FIRST_WEEK_START) todayStart = FIRST_WEEK_START;
+    currentWeekStart = todayStart;
     render();
   });
 
