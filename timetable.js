@@ -8,11 +8,20 @@
         {code:'CSE407', name:'Cloud Computing', short:'CC'},
         {code:'CSE409', name:'Parallel & Distributed', short:'PDS'},
         {code:'CSE411', name:'PDS Lab', short:'PDS-L'},
-        {code:'CSE415', name:'Internet of Things', short:'IoT'}
+        {code:'CSE415', name:'Internet of Things', short:'IoT'},
+        {code:'CSE431', name:'IOT Lab', short:'IoT-L'},
+        {code:'INT404', name:'Big Data Analytics', short:'BDA'},
+        {code:'INT405', name:'Machine Learning Techniques', short:'MLT'}
       ],
       slots: [
-        {id:'s1', label:'08:45-09:45', map:{mon:'CSE409',tue:'CSE407',wed:'CSE411',thu:'CSE415',fri:'CSE407',sat:''}},
-        {id:'s2', label:'09:45-10:45', map:{mon:'CSE411',tue:'',wed:'CSE411',thu:'CSE407',fri:'CSE409',sat:''}}
+        {id:'s1', label:'08:45-09:45', map:{mon:'CSE409',tue:'',wed:'',thu:'CSE415',fri:'CSE407',sat:''}},
+        {id:'s2', label:'09:45-10:45', map:{mon:'INT405',tue:'CSE407',wed:'CSE415',thu:'CSE407',fri:'INT404',sat:''}},
+        {id:'s3', label:'11:00-12:00', map:{mon:'CSE431',tue:'CSE409',wed:'INT405',thu:'INT404',fri:'CSE409',sat:''}},
+        {id:'s4', label:'12:00-01:00', map:{mon:'CSE431',tue:'CSE415',wed:'',thu:'',fri:'',sat:''}},
+        {id:'s5', label:'01:00-02:00', map:{mon:'',tue:'',wed:'CSE409',thu:'',fri:'INT405',sat:''}},
+        {id:'s6', label:'02:00-03:00', map:{mon:'',tue:'INT404',wed:'CSE407',thu:'',fri:'CSE415',sat:''}},
+        {id:'s7', label:'03:15-04:15', map:{mon:'',tue:'INT405',wed:'CSE411',thu:'',fri:'',sat:''}},
+        {id:'s8', label:'04:15-05:15', map:{mon:'',tue:'',wed:'CSE411',thu:'',fri:'',sat:''}}
       ]
     };
     saveTimetable(timetable);
