@@ -5,6 +5,13 @@
   <title>Timetable Editor</title>
   <link rel="stylesheet" href="style.css">
 </head>
+ <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script>
+  // TEMP: replace these with your project values
+  const SUPABASE_URL = 'https://rplkvzsmwvvcteivuzhi.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwbGt2enNtd3Z2Y3RlaXZ1emhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxMjM1MDYsImV4cCI6MjA3NDY5OTUwNn0.Ky64hSVROsu5CHycyc31h5yEpFORbU-KjIK_jCdmlYQ';
+  const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
 <body>
   <div class="header">
     <div><h1>Timetable Editor</h1><div class="small">Slot-first view: add slots then assign a subject per day.</div></div>
