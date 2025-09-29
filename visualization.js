@@ -1,11 +1,10 @@
-// visualization.js (updated)
-// Uses storage.js helpers: loadTimetable(), loadAttendance(), START_DATE, weekKeyFromDate(), weekNumberForDate(), weekLabelFromStartIso(), isoDate(), startOfWeek()
+// visualization.js (replace file)
+// relies on storage.js functions: loadTimetable(), loadAttendance(), START_DATE, startOfWeek(), isoDate(), weekNumberForDate(), weekLabelFromStartIso(), weekKeyFromDate()
 
 (function(){
   let timetable = loadTimetable() || {subjects:[], slots:[]};
   let attendance = loadAttendance();
 
-  // DOM
   const weekSelector = document.getElementById('weekSelector');
   const includeODChk = document.getElementById('includeOD');
   const cumulativeChk = document.getElementById('cumulative');
@@ -13,83 +12,74 @@
   const exportBtn = document.getElementById('exportBtn');
 
   const totalVal = document.getElementById('totalVal'), presentVal = document.getElementById('presentVal'), absentVal = document.getElementById('absentVal'), odVal = document.getElementById('odVal');
-  const pieCtx = document.getElementById('pieChart').getContext('2d');
-  const barCtx = document.getElementById('barChart').getContext('2d');
+  const pieCanvas = document.getElementById('pieChart');
+  const barCanvas = document.getElementById('barChart');
   const subjectList = document.getElementById('subjectList');
+
+  // make sure canvases' parents have an explicit height so Chart.js can render responsively
+  pieCanvas.parentElement.style.minHeight = '220px';
+  barCanvas.parentElement.style.minHeight = '220px';
 
   let pieChart = null, barChart = null;
 
   function buildWeekOptions(){
     weekSelector.innerHTML = '';
-    // weeks window from START_DATE (26 weeks)
+    // build a reasonable window of week starts from START_DATE for next 52 weeks
     const start = startOfWeek(START_DATE);
-    const opts = [];
+    const isoList = [];
     for(let i=0;i<52;i++){
-      const s = new Date(start); 
-      s.setDate(start.getDate() + 7*i);
-      const iso = isoDate(s);
-      opts.push(iso);
+      const d = new Date(start); d.setDate(start.getDate() + 7*i);
+      isoList.push(isoDate(d));
     }
-    // add any recorded weeks as well
+    // union with recorded weeks
     const recorded = Object.keys(attendance || {});
-    const uniq = Array.from(new Set([...opts, ...recorded]));
+    const uniq = Array.from(new Set([...isoList, ...recorded])).sort();
     uniq.forEach(iso=>{
       const opt = document.createElement('option');
       opt.value = iso;
       opt.textContent = `Week ${weekNumberForDate(new Date(iso))} • ${weekLabelFromStartIso(iso)}`;
       weekSelector.appendChild(opt);
     });
-    // default to current week start
+    // default to current week if available else first
     const cw = weekKeyFromDate(new Date());
-    if(Array.from(weekSelector.options).some(o=>o.value === cw)) weekSelector.value = cw;
+    if([...weekSelector.options].some(o=>o.value === cw)) weekSelector.value = cw;
     else if(weekSelector.options.length) weekSelector.selectedIndex = 0;
   }
 
   function collectWeeksToUse(selectedIso, cumulative){
     if(!cumulative) return [selectedIso];
-    // cumulative: all week starts from START_DATE up to selectedIso
+    // accumulate weeks from START_DATE up to selectedIso inclusive
     const arr = [];
-    // iterate weeks from START_DATE until selectedIso inclusive
     let cur = startOfWeek(START_DATE);
-    const end = new Date(selectedIso);
+    const end = startOfWeek(new Date(selectedIso));
     while(cur <= end){
       arr.push(isoDate(cur));
       cur = new Date(cur.getTime() + 7*24*60*60*1000);
     }
-    // include only those with any attendance or keep them (we can include even if no data)
     return arr;
   }
 
   function computeDataForWeeks(weekIsos, includeOD){
-    // weekIsos: array of week ISO start strings
-    // includeOD: boolean -> treat OD as Present (true) or Absent (false)
     const totals = { total:0, present:0, absent:0, od:0 };
     const perSub = {}; // code -> {total,present,absent,od}
-
     for(const wk of weekIsos){
       const recs = attendance[wk] || {};
-      for(const key in recs){
-        const r = recs[key];
+      for(const k in recs){
+        const r = recs[k];
         if(!r || !r.subject) continue;
-        if(r.status === 'H') continue; // skip holidays from totals
+        if(r.status === 'H') continue; // skip holiday
         totals.total++;
         if(!perSub[r.subject]) perSub[r.subject] = { total:0, present:0, absent:0, od:0 };
         perSub[r.subject].total++;
-
         if(r.status === 'P'){ totals.present++; perSub[r.subject].present++; }
         else if(r.status === 'A'){ totals.absent++; perSub[r.subject].absent++; }
         else if(r.status === 'OD'){ totals.od++; perSub[r.subject].od++; }
       }
     }
 
-    // Construct pie values according to includeOD
-    let piePresent = totals.present;
-    let pieAbsent = totals.absent;
-    if(includeOD){
-      piePresent += totals.od;
-    } else {
-      pieAbsent += totals.od;
-    }
+    // for pie calculation: includeOD determines whether OD counts as present or absent
+    const piePresent = totals.present + (includeOD ? totals.od : 0);
+    const pieAbsent = totals.absent + (includeOD ? 0 : totals.od);
 
     return { totals, perSub, piePresent, pieAbsent };
   }
@@ -102,14 +92,16 @@
   }
 
   function renderPie(presentCount, absentCount){
+    const ctx = pieCanvas.getContext('2d');
     if(pieChart) pieChart.destroy();
-    pieChart = new Chart(pieCtx, {
+    pieChart = new Chart(ctx, {
       type:'doughnut',
-      data:{
-        labels:['Present','Absent'],
-        datasets:[{ data:[presentCount, absentCount], backgroundColor:['#10b981','#ef4444'] }]
-      },
-      options:{ plugins:{ legend:{ position:'bottom' } }, maintainAspectRatio: false }
+      data:{ labels:['Present','Absent'], datasets:[{ data:[presentCount, absentCount], backgroundColor:['#10b981','#ef4444'] }] },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom' } }
+      }
     });
   }
 
@@ -122,51 +114,81 @@
     const values = codes.map(c=>{
       const s = perSub[c];
       const presentCount = includeOD ? s.present + s.od : s.present;
-      return s.total ? Math.round((presentCount / s.total)*100) : 0;
+      return s.total ? Math.round((presentCount / s.total) * 100) : 0;
     });
 
+    // bar chart
+    const ctxB = barCanvas.getContext('2d');
     if(barChart) barChart.destroy();
-    barChart = new Chart(barCtx, {
+    barChart = new Chart(ctxB, {
       type:'bar',
       data:{
         labels,
-        datasets:[{
-          label: 'Attendance %',
-          data: values,
-          backgroundColor: labels.map((_,i)=> palette(i))
-        }]
+        datasets:[{ label:'Attendance %', data: values, backgroundColor: labels.map((_,i)=> palette(i)) }]
       },
       options:{
+        responsive:true,
+        maintainAspectRatio:false,
         plugins:{ legend:{ display:false } },
-        scales:{ y:{ beginAtZero:true, max:100, ticks:{ callback: v => v + '%' } } },
-        maintainAspectRatio: false
+        scales:{ y:{ beginAtZero:true, max:100, ticks:{ callback: v => v + '%' } } }
       }
     });
 
-    // progress bars
+    // progress rows - responsive
     subjectList.innerHTML = '';
-    codes.forEach((c, i)=>{
+    codes.forEach((c,i)=>{
       const s = perSub[c];
       const presentCount = includeOD ? s.present + s.od : s.present;
-      const pct = s.total ? Math.round((presentCount / s.total)*100) : 0;
+      const pct = s.total ? Math.round((presentCount / s.total) * 100) : 0;
       const sMeta = timetable.subjects.find(x=>x.code===c) || {short:c, name:c};
+
       const row = document.createElement('div');
-      row.style.display='flex'; row.style.alignItems='center'; row.style.justifyContent='space-between';
-      row.style.marginBottom='8px';
-      row.innerHTML = `
-        <div style="display:flex;gap:10px;align-items:center">
-          <div style="width:56px;height:36px;border-radius:8px;background:linear-gradient(90deg, rgba(124,58,237,0.10), rgba(6,182,212,0.06));display:flex;align-items:center;justify-content:center;font-weight:400">${escapeHtml(sMeta.short || c)}</div>
-          <div>
-            <div style="font-weight:400;letter-spacing:1px">${escapeHtml(sMeta.name || c)}</div>
-            <div class="small" style="color:#556">${presentCount}/${s.total} • ${pct}%</div>
-          </div>
-        </div>
-        <div style="flex-basis:260px;max-width:260px">
-          <div style="height:12px;background:#eef6ff;border-radius:999px;overflow:hidden">
-            <div style="width:${pct}%;height:100%;background:${paletteColor(pct)}"></div>
-          </div>
-        </div>
-      `;
+      row.className = 'subject-row';
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.justifyContent = 'space-between';
+      row.style.gap = '12px';
+      row.style.marginBottom = '10px';
+      row.style.flexWrap = 'wrap';
+
+      const left = document.createElement('div');
+      left.style.display = 'flex';
+      left.style.alignItems = 'center';
+      left.style.gap = '12px';
+      left.style.minWidth = '0'; // allow shrinking
+
+      const pill = document.createElement('div');
+      pill.className = 'short-pill';
+      pill.textContent = sMeta.short || c;
+
+      const meta = document.createElement('div');
+      meta.innerHTML = `<div style="font-weight:800">${escapeHtml(sMeta.name || c)}</div><div class="small" style="color:#556">${presentCount}/${s.total} • ${pct}%</div>`;
+
+      left.appendChild(pill);
+      left.appendChild(meta);
+
+      const right = document.createElement('div');
+      right.style.flex = '1 1 200px'; // flexible and shrinkable
+      right.style.minWidth = '0';
+
+      const progWrap = document.createElement('div');
+      progWrap.style.width = '100%';
+      progWrap.style.background = '#eef6ff';
+      progWrap.style.borderRadius = '999px';
+      progWrap.style.overflow = 'hidden';
+      progWrap.style.height = '12px';
+
+      const fill = document.createElement('div');
+      fill.style.width = pct + '%';
+      fill.style.height = '100%';
+      fill.style.background = paletteColor(pct);
+      fill.style.transition = 'width 0.4s ease';
+
+      progWrap.appendChild(fill);
+      right.appendChild(progWrap);
+
+      row.appendChild(left);
+      row.appendChild(right);
       subjectList.appendChild(row);
     });
   }
@@ -180,10 +202,8 @@
     if(pct >= 50) return '#0f6ff5';
     return '#ef4444';
   }
-
   function escapeHtml(s){ if(!s && s!==0) return ''; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
 
-  // main render
   function renderAll(){
     attendance = loadAttendance();
     timetable = loadTimetable() || {subjects:[], slots:[]};
@@ -193,20 +213,14 @@
     const weeksToUse = collectWeeksToUse(selectedIso, cumulative);
     const { totals, perSub, piePresent, pieAbsent } = computeDataForWeeks(weeksToUse, includeOD);
 
-    // Totals for cards should reflect raw totals (not the pie adjustments)
     renderTotals(totals);
-
-    // Pie uses piePresent/pieAbsent
     renderPie(piePresent, pieAbsent);
-
-    // Bar chart & progress use perSub + includeOD
     renderBarAndProgress(perSub, includeOD);
   }
 
-  // Export
   exportBtn.addEventListener('click', ()=>{
-    const payload = {version:'v2', timetable, attendance: loadAttendance()};
-    const blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    const payload = { version:'v2', timetable, attendance: loadAttendance() };
+    const blob = new Blob([JSON.stringify(payload,null,2)], { type:'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'attendance_export_v2.json'; a.click();
     URL.revokeObjectURL(url);
@@ -217,7 +231,6 @@
   cumulativeChk.addEventListener('change', renderAll);
   weekSelector.addEventListener('change', renderAll);
 
-  // init
   function init(){
     buildWeekOptions();
     renderAll();
